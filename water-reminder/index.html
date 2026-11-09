@@ -12,11 +12,13 @@
   :root {
     --bg: #f0f9ff; --card: #ffffff; --text: #0f172a; --muted: #64748b;
     --accent: #0ea5e9; --accent-2: #0284c7; --water: #38bdf8; --border: #e2e8f0;
+    --danger: #dc2626; --toggle-bg: #0284c7;
   }
   @media (prefers-color-scheme: dark) {
     :root {
       --bg: #0b1220; --card: #111a2e; --text: #e2e8f0; --muted: #94a3b8;
       --accent: #38bdf8; --accent-2: #0ea5e9; --water: #0ea5e9; --border: #1e293b;
+      --danger: #e11d48; --toggle-bg: #0284c7;
     }
   }
   * { box-sizing: border-box; }
@@ -52,6 +54,16 @@
   button:active { transform: scale(.97); }
   .primary { background: var(--accent); color: #fff; font-weight: 600; font-size: 1.1rem; width: 100%; }
   .ghost { background: transparent; color: var(--muted); border: 1px solid var(--border); }
+  .big-toggle {
+    width: 100%; min-height: 68px; font-size: 1.3rem; font-weight: 700; line-height: 1.2;
+    display: flex; align-items: center; justify-content: center; gap: 10px;
+    border-radius: 18px; color: #fff; background: var(--toggle-bg); padding: 12px 14px;
+    box-shadow: 0 6px 18px rgba(14,165,233,.35); border: 2px solid transparent;
+  }
+  .big-toggle .ico { font-size: 1.6rem; flex: none; }
+  .big-toggle .ico + span { text-align: center; }
+  .big-toggle.on { background: var(--danger); box-shadow: 0 6px 18px rgba(220,38,38,.35); }
+  .big-toggle:focus-visible { outline: 3px solid var(--text); outline-offset: 3px; }
   .row { display: flex; gap: 10px; }
   .row > * { flex: 1; }
   .timer { text-align: center; font-size: 1.1rem; }
@@ -95,7 +107,7 @@
     <span id="timerTitle">Следующее напоминание через</span>
     <b id="timer">--:--</b>
     <div class="row" style="margin-top:12px">
-      <button class="primary" id="toggle">Включить напоминания</button>
+      <button class="big-toggle" id="toggle"><span class="ico">🔔</span><span>Включить напоминания</span></button>
     </div>
     <p class="status" id="status"></p>
   </section>
@@ -218,8 +230,12 @@ function tick() {
 }
 
 function renderToggle() {
-  $('toggle').textContent = state.enabled ? 'Выключить напоминания' : 'Включить напоминания';
-  $('toggle').className = state.enabled ? 'ghost' : 'primary';
+  const t = $('toggle');
+  t.innerHTML = state.enabled
+    ? '<span class="ico">🔕</span><span>Выключить напоминания</span>'
+    : '<span class="ico">🔔</span><span>Включить напоминания</span>';
+  t.className = state.enabled ? 'big-toggle on' : 'big-toggle';
+  t.setAttribute('aria-pressed', state.enabled ? 'true' : 'false');
   let s = '';
   if (!('Notification' in window)) s = 'Браузер не поддерживает уведомления — будет звук и баннер на странице.';
   else if (Notification.permission === 'denied') s = 'Уведомления запрещены в настройках браузера — будет звук и баннер на странице.';
