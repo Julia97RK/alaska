@@ -1,0 +1,263 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Попей воды</title>
+<meta name="theme-color" content="#0ea5e9">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="icon.svg">
+<style>
+  :root {
+    --bg: #f0f9ff; --card: #ffffff; --text: #0f172a; --muted: #64748b;
+    --accent: #0ea5e9; --accent-2: #0284c7; --water: #38bdf8; --border: #e2e8f0;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #0b1220; --card: #111a2e; --text: #e2e8f0; --muted: #94a3b8;
+      --accent: #38bdf8; --accent-2: #0ea5e9; --water: #0ea5e9; --border: #1e293b;
+    }
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--bg); color: var(--text);
+    font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    display: flex; justify-content: center; padding: 24px 16px 48px;
+  }
+  main { width: 100%; max-width: 420px; display: grid; gap: 16px; }
+  h1 { margin: 0; font-size: 1.6rem; text-align: center; }
+  .sub { text-align: center; color: var(--muted); margin: -8px 0 0; }
+  .card {
+    background: var(--card); border: 1px solid var(--border);
+    border-radius: 20px; padding: 20px;
+  }
+  .glass-wrap { display: flex; flex-direction: column; align-items: center; gap: 12px; }
+  .glass {
+    position: relative; width: 140px; height: 190px;
+    border: 4px solid var(--accent); border-top: none;
+    border-radius: 0 0 28px 28px; overflow: hidden;
+  }
+  .fill {
+    position: absolute; left: 0; right: 0; bottom: 0; height: 0%;
+    background: linear-gradient(180deg, var(--water), var(--accent-2));
+    transition: height .6s ease;
+  }
+  .count { font-size: 2rem; font-weight: 700; }
+  .count small { font-size: 1rem; color: var(--muted); font-weight: 400; }
+  button {
+    font: inherit; border: none; border-radius: 14px; padding: 14px 18px;
+    cursor: pointer; transition: transform .1s, opacity .2s;
+  }
+  button:active { transform: scale(.97); }
+  .primary { background: var(--accent); color: #fff; font-weight: 600; font-size: 1.1rem; width: 100%; }
+  .ghost { background: transparent; color: var(--muted); border: 1px solid var(--border); }
+  .row { display: flex; gap: 10px; }
+  .row > * { flex: 1; }
+  .timer { text-align: center; font-size: 1.1rem; }
+  .timer b { font-variant-numeric: tabular-nums; font-size: 1.5rem; display: block; margin-top: 4px; }
+  label { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 8px 0; }
+  input[type=number], input[type=time], select {
+    font: inherit; padding: 8px 10px; border-radius: 10px; border: 1px solid var(--border);
+    background: var(--bg); color: var(--text); width: 110px;
+  }
+  input[type=checkbox] { width: 22px; height: 22px; accent-color: var(--accent); }
+  h2 { margin: 0 0 8px; font-size: 1.1rem; }
+  .status { font-size: .9rem; color: var(--muted); text-align: center; }
+  .banner {
+    position: fixed; top: 16px; left: 50%; transform: translate(-50%, -150%);
+    background: var(--accent); color: #fff; padding: 14px 20px; border-radius: 16px;
+    font-weight: 600; transition: transform .4s; box-shadow: 0 10px 30px rgba(0,0,0,.2);
+    max-width: calc(100% - 32px); text-align: center;
+  }
+  .banner.show { transform: translate(-50%, 0); }
+  .done { color: #16a34a; font-weight: 600; text-align: center; display: none; }
+</style>
+</head>
+<body>
+<div class="banner" id="banner">💧 Время попить воды!</div>
+<main>
+  <h1>💧 Попей воды</h1>
+  <p class="sub">Напомню выпить стакан воды</p>
+
+  <section class="card glass-wrap">
+    <div class="glass"><div class="fill" id="fill"></div></div>
+    <div class="count"><span id="count">0</span> <small>/ <span id="goalLabel">8</span> стаканов</small></div>
+    <div class="done" id="done">🎉 Норма на сегодня выполнена!</div>
+    <button class="primary" id="drink">Я выпил(а) стакан 🥤</button>
+    <div class="row" style="width:100%">
+      <button class="ghost" id="undo">− Отменить</button>
+      <button class="ghost" id="reset">Сбросить день</button>
+    </div>
+  </section>
+
+  <section class="card timer">
+    <span id="timerTitle">Следующее напоминание через</span>
+    <b id="timer">--:--</b>
+    <div class="row" style="margin-top:12px">
+      <button class="primary" id="toggle">Включить напоминания</button>
+    </div>
+    <p class="status" id="status"></p>
+  </section>
+
+  <section class="card">
+    <h2>Настройки</h2>
+    <label>Интервал, минут
+      <input type="number" id="interval" min="1" max="240" value="60">
+    </label>
+    <label>Цель, стаканов в день
+      <input type="number" id="goal" min="1" max="30" value="8">
+    </label>
+    <label>Напоминать с
+      <input type="time" id="from" value="09:00">
+    </label>
+    <label>Напоминать до
+      <input type="time" id="to" value="22:00">
+    </label>
+    <label>Звук
+      <input type="checkbox" id="sound" checked>
+    </label>
+  </section>
+
+  <p class="status">Напоминания работают, пока эта страница открыта (можно свернуть вкладку).
+    На телефоне добавьте страницу на главный экран.</p>
+</main>
+
+<script>
+const $ = id => document.getElementById(id);
+const KEY = 'water-reminder-v1';
+const today = () => new Date().toLocaleDateString('sv'); // YYYY-MM-DD
+
+const defaults = { interval: 60, goal: 8, from: '09:00', to: '22:00', sound: true,
+                   enabled: false, next: 0, day: today(), count: 0 };
+let state = defaults;
+try { state = { ...defaults, ...JSON.parse(localStorage.getItem(KEY) || '{}') }; } catch {}
+const save = () => { try { localStorage.setItem(KEY, JSON.stringify(state)); } catch {} };
+
+let swReg = null;
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('sw.js').then(r => swReg = r).catch(() => {});
+}
+
+function rollDay() {
+  if (state.day !== today()) { state.day = today(); state.count = 0; save(); }
+}
+
+function renderCount() {
+  rollDay();
+  $('count').textContent = state.count;
+  $('goalLabel').textContent = state.goal;
+  $('fill').style.height = Math.min(100, state.count / state.goal * 100) + '%';
+  $('done').style.display = state.count >= state.goal ? 'block' : 'none';
+}
+
+function minutesOf(t) { const [h, m] = t.split(':').map(Number); return h * 60 + m; }
+function inActiveHours(d = new Date()) {
+  const now = d.getHours() * 60 + d.getMinutes();
+  const a = minutesOf(state.from), b = minutesOf(state.to);
+  return a <= b ? now >= a && now < b : now >= a || now < b;
+}
+
+function schedule() {
+  state.next = Date.now() + state.interval * 60 * 1000;
+  save();
+}
+
+function beep() {
+  if (!state.sound) return;
+  try {
+    const ctx = new (window.AudioContext || window.webkitAudioContext)();
+    [0, 0.18].forEach((t, i) => {
+      const o = ctx.createOscillator(), g = ctx.createGain();
+      o.type = 'sine'; o.frequency.value = i ? 880 : 660;
+      g.gain.setValueAtTime(0.0001, ctx.currentTime + t);
+      g.gain.exponentialRampToValueAtTime(0.3, ctx.currentTime + t + 0.02);
+      g.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + t + 0.25);
+      o.connect(g).connect(ctx.destination);
+      o.start(ctx.currentTime + t); o.stop(ctx.currentTime + t + 0.3);
+    });
+  } catch {}
+}
+
+async function notify() {
+  const left = Math.max(0, state.goal - state.count);
+  const body = left ? `Выпей стакан воды. Осталось сегодня: ${left}` : 'Норма выполнена, но глоток воды не помешает 🙂';
+  if ('Notification' in window && Notification.permission === 'granted') {
+    const opts = { body, icon: 'icon.svg', tag: 'water', renotify: true };
+    try {
+      if (swReg) await swReg.showNotification('💧 Время попить воды!', opts);
+      else new Notification('💧 Время попить воды!', opts);
+    } catch {}
+  }
+  beep();
+  if (navigator.vibrate) navigator.vibrate([200, 100, 200]);
+  $('banner').classList.add('show');
+  setTimeout(() => $('banner').classList.remove('show'), 6000);
+  document.title = '💧 Попей воды!';
+}
+
+function tick() {
+  renderCount();
+  if (!state.enabled) {
+    $('timer').textContent = '--:--';
+    $('timerTitle').textContent = 'Напоминания выключены';
+    return;
+  }
+  if (!inActiveHours()) {
+    $('timerTitle').textContent = 'Сейчас не время для напоминаний';
+    $('timer').textContent = `${state.from}–${state.to}`;
+    if (Date.now() >= state.next) schedule();
+    return;
+  }
+  $('timerTitle').textContent = 'Следующее напоминание через';
+  let ms = state.next - Date.now();
+  if (ms <= 0) { notify(); schedule(); ms = state.next - Date.now(); }
+  const s = Math.ceil(ms / 1000);
+  const h = Math.floor(s / 3600), m = Math.floor(s % 3600 / 60), sec = s % 60;
+  $('timer').textContent = (h ? h + ':' : '') + String(m).padStart(2, '0') + ':' + String(sec).padStart(2, '0');
+}
+
+function renderToggle() {
+  $('toggle').textContent = state.enabled ? 'Выключить напоминания' : 'Включить напоминания';
+  $('toggle').className = state.enabled ? 'ghost' : 'primary';
+  let s = '';
+  if (!('Notification' in window)) s = 'Браузер не поддерживает уведомления — будет звук и баннер на странице.';
+  else if (Notification.permission === 'denied') s = 'Уведомления запрещены в настройках браузера — будет звук и баннер на странице.';
+  $('status').textContent = s;
+}
+
+$('toggle').onclick = async () => {
+  state.enabled = !state.enabled;
+  if (state.enabled) {
+    if ('Notification' in window && Notification.permission === 'default') {
+      try { await Notification.requestPermission(); } catch {}
+    }
+    schedule();
+  }
+  save(); renderToggle(); tick();
+};
+
+$('drink').onclick = () => {
+  rollDay(); state.count++;
+  if (state.enabled) schedule();
+  document.title = 'Попей воды';
+  save(); tick();
+};
+$('undo').onclick = () => { state.count = Math.max(0, state.count - 1); save(); tick(); };
+$('reset').onclick = () => { if (confirm('Сбросить счётчик за сегодня?')) { state.count = 0; save(); tick(); } };
+
+// settings
+$('interval').value = state.interval; $('goal').value = state.goal;
+$('from').value = state.from; $('to').value = state.to; $('sound').checked = state.sound;
+$('interval').onchange = e => { state.interval = Math.min(240, Math.max(1, +e.target.value || 60)); e.target.value = state.interval; if (state.enabled) schedule(); save(); tick(); };
+$('goal').onchange = e => { state.goal = Math.min(30, Math.max(1, +e.target.value || 8)); e.target.value = state.goal; save(); tick(); };
+$('from').onchange = e => { state.from = e.target.value || '09:00'; save(); tick(); };
+$('to').onchange = e => { state.to = e.target.value || '22:00'; save(); tick(); };
+$('sound').onchange = e => { state.sound = e.target.checked; save(); };
+document.addEventListener('visibilitychange', () => { if (!document.hidden) document.title = 'Попей воды'; });
+
+renderToggle(); tick();
+setInterval(tick, 1000);
+</script>
+</body>
+</html>
